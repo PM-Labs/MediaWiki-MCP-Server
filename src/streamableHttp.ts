@@ -11,6 +11,27 @@ import { createServer } from './server.js';
 const app = express();
 app.use( express.json() );
 
+const AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
+
+app.use( ( req: Request, res: Response, next: Function ) => {
+	if ( req.path === '/health' ) {
+		return next();
+	}
+	if ( !AUTH_TOKEN ) {
+		return next();
+	}
+	const authHeader = req.headers[ 'authorization' ];
+	if ( !authHeader || !authHeader.startsWith( 'Bearer ' ) ) {
+		res.status( 401 ).json( { error: 'Unauthorized' } );
+		return;
+	}
+	if ( authHeader.slice( 7 ) !== AUTH_TOKEN ) {
+		res.status( 401 ).json( { error: 'Unauthorized' } );
+		return;
+	}
+	next();
+} );
+
 const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
 app.post( '/mcp', async ( req: Request, res: Response ) => {
