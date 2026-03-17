@@ -12,6 +12,26 @@ const app = express();
 app.use( express.json() );
 
 const AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
+const OAUTH_CLIENT_ID = process.env.OAUTH_CLIENT_ID;
+const OAUTH_CLIENT_SECRET = process.env.OAUTH_CLIENT_SECRET;
+
+// OAuth 2.0 client credentials endpoint for claude.ai custom integrations
+app.post( '/oauth/token', ( req: Request, res: Response ) => {
+	const { grant_type, client_id, client_secret } = req.body;
+	if ( grant_type !== 'client_credentials' ) {
+		res.status( 400 ).json( { error: 'unsupported_grant_type' } );
+		return;
+	}
+	if ( !OAUTH_CLIENT_ID || !OAUTH_CLIENT_SECRET || !AUTH_TOKEN ) {
+		res.status( 500 ).json( { error: 'server_misconfigured' } );
+		return;
+	}
+	if ( client_id !== OAUTH_CLIENT_ID || client_secret !== OAUTH_CLIENT_SECRET ) {
+		res.status( 401 ).json( { error: 'invalid_client' } );
+		return;
+	}
+	res.json( { access_token: AUTH_TOKEN, token_type: 'Bearer', expires_in: 86400 } );
+} );
 
 app.use( ( req: Request, res: Response, next: Function ) => {
 	if ( req.path === '/health' ) {
